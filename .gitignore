@@ -1,0 +1,10 @@
+node_modules/
+.store/
+website/
+*.log
+.nxcode/
+.claude/
+coverage/
+.DS_Store
+Thumbs.db
+*.zip
