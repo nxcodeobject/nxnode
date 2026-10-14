@@ -2,6 +2,23 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config/config');
 
+// `fs.existsSync` uses stat under the hood, which follows symlinks/junctions.
+// On some Windows setups (filesystem filter drivers) that stat fails, so a valid
+// link is reported as missing. lstat does not follow the link and is reliable here.
+function pathExists(targetPath) {
+  try {
+    fs.lstatSync(targetPath);
+    return true;
+  } catch {
+    try {
+      fs.statSync(targetPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 function getManifestPath(projectDir) {
   return path.join(projectDir, 'node_modules', '.nxnode', 'links.json');
 }
@@ -41,7 +58,7 @@ function linkPackage(projectDir, name, version, storePackageDir) {
 
   fs.mkdirSync(path.dirname(targetDir), { recursive: true });
 
-  if (fs.existsSync(targetDir)) {
+  if (pathExists(targetDir)) {
     const stat = fs.lstatSync(targetDir);
     if (stat.isSymbolicLink() || stat.isDirectory()) {
       fs.rmSync(targetDir, { recursive: true, force: true });
@@ -117,7 +134,7 @@ function unlinkPackage(projectDir, name) {
   const targetDir = path.join(projectDir, 'node_modules', name);
   removeManifestEntry(projectDir, name);
 
-  if (!fs.existsSync(targetDir)) return false;
+  if (!pathExists(targetDir)) return false;
 
   const stat = fs.lstatSync(targetDir);
   if (stat.isSymbolicLink() || stat.isDirectory()) {
@@ -145,7 +162,7 @@ function copyRecursive(src, dest) {
 
 function isLinked(projectDir, name) {
   const targetDir = path.join(projectDir, 'node_modules', name);
-  if (!fs.existsSync(targetDir)) return false;
+  if (!pathExists(targetDir)) return false;
   const stat = fs.lstatSync(targetDir);
   return stat.isSymbolicLink();
 }
@@ -194,7 +211,7 @@ function linkNestedDependency(packageDir, depName, depSourceDir) {
   const nodeModulesDir = path.join(packageDir, 'node_modules');
   const targetDir = path.join(nodeModulesDir, depName);
 
-  if (fs.existsSync(targetDir)) {
+  if (pathExists(targetDir)) {
     linkBinEntries(nodeModulesDir, depName, targetDir);
     return;
   }
@@ -253,5 +270,6 @@ module.exports = {
   copyRecursive,
   readManifest,
   getManifestPath,
-  linkPackageDependencies
+  linkPackageDependencies,
+  pathExists
 };

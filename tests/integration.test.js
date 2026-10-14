@@ -4,6 +4,17 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// fs.existsSync (stat-based) follows symlinks/junctions and can fail on some
+// Windows setups, reporting a valid link as missing. Tests must use lstat.
+function pathExists(targetPath) {
+  try {
+    fs.lstatSync(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 describe('Integration: Install Flow', () => {
   const testDir = path.join(os.tmpdir(), 'nxnode-integration-test');
   const storeDir = path.join(testDir, 'store');
@@ -79,7 +90,7 @@ describe('Integration: Linker', () => {
     const result = linker.linkPackage(projectDir, 'test-pkg', '1.0.0', storeDir);
     
     const linkedPath = path.join(projectDir, 'node_modules', 'test-pkg');
-    assert.ok(fs.existsSync(linkedPath));
+    assert.ok(pathExists(linkedPath));
   });
 
   it('should unlink package', () => {
@@ -93,10 +104,10 @@ describe('Integration: Linker', () => {
     fs.mkdirSync(projectDir, { recursive: true });
     
     linker.linkPackage(projectDir, 'test-pkg', '1.0.0', storeDir);
-    assert.ok(fs.existsSync(path.join(projectDir, 'node_modules', 'test-pkg')));
+    assert.ok(pathExists(path.join(projectDir, 'node_modules', 'test-pkg')));
     
     linker.unlinkPackage(projectDir, 'test-pkg');
-    assert.ok(!fs.existsSync(path.join(projectDir, 'node_modules', 'test-pkg')));
+    assert.ok(!pathExists(path.join(projectDir, 'node_modules', 'test-pkg')));
   });
 });
 

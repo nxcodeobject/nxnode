@@ -2,6 +2,22 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config/config');
 
+// `fs.existsSync` (stat-based) can follow a symlink/junction and fail on some
+// Windows setups, reporting a valid link as missing. lstat is reliable here.
+function pathExists(targetPath) {
+  try {
+    fs.lstatSync(targetPath);
+    return true;
+  } catch {
+    try {
+      fs.statSync(targetPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 function getStorePath() {
   return config.get('storePath');
 }
@@ -35,7 +51,7 @@ function ensureStore() {
 
 function packageExists(name, version) {
   const pkgDir = getPackageDir(name, version);
-  return fs.existsSync(pkgDir) && fs.existsSync(path.join(pkgDir, 'package'));
+  return pathExists(pkgDir) && pathExists(path.join(pkgDir, 'package'));
 }
 
 function saveMetadata(name, version, metadata) {

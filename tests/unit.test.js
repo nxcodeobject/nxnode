@@ -119,6 +119,185 @@ describe('Install package argument parsing', () => {
   });
 });
 
+describe('License detection', () => {
+  const license = require('../src/provenance/license');
+
+  it('should normalize common license aliases to SPDX', () => {
+    assert.strictEqual(license.normalizeLicense('MIT'), 'MIT');
+    assert.strictEqual(license.normalizeLicense('Apache 2.0'), 'Apache-2.0');
+    assert.strictEqual(license.normalizeLicense('BSD'), 'BSD-3-Clause');
+    assert.strictEqual(license.normalizeLicense('GPLv3'), 'GPL-3.0-only');
+  });
+
+  it('should return null for unknown license without guessing', () => {
+    assert.strictEqual(license.normalizeLicense('SomeCustomLicense'), null);
+    assert.strictEqual(license.normalizeLicense(''), null);
+    assert.strictEqual(license.normalizeLicense(null), null);
+  });
+
+  it('should handle SPDX compound expressions', () => {
+    assert.strictEqual(license.normalizeLicense('MIT OR Apache-2.0'), 'MIT OR Apache-2.0');
+  });
+
+  it('should read declared license from package.json forms', () => {
+    assert.strictEqual(license.getDeclaredLicense({ license: 'MIT' }), 'MIT');
+    assert.strictEqual(license.getDeclaredLicense({ license: { type: 'ISC' } }), 'ISC');
+    assert.strictEqual(
+      license.getDeclaredLicense({ licenses: [{ type: 'MIT' }, { type: 'Apache-2.0' }] }),
+      'MIT OR Apache-2.0'
+    );
+    assert.strictEqual(license.getDeclaredLicense({}), null);
+  });
+
+  it('should detect license from LICENSE file text', () => {
+    assert.strictEqual(
+      license.detectLicenseFromText('MIT License\n\nPermission is hereby granted, free of charge...'),
+      'MIT'
+    );
+    assert.strictEqual(
+      license.detectLicenseFromText('Licensed under the Apache License, Version 2.0'),
+      'Apache-2.0'
+    );
+    assert.strictEqual(license.detectLicenseFromText('all rights reserved'), null);
+  });
+});
+
+describe('Provenance export', () => {
+  const exporter = require('../src/provenance/export');
+
+  const entries = [
+    {
+      name: 'express',
+      version: '5.1.0',
+      origin: {
+        source: 'npm',
+        tarball: 'https://registry.npmjs.org/express/-/express-5.1.0.tgz',
+        integrity: 'sha512-abc123'
+      },
+      license: { declared: 'MIT', detected: 'MIT', mismatch: false }
+    }
+  ];
+
+  it('should build a valid SPDX 2.3 document', () => {
+    const doc = exporter.buildSpdx(entries, { now: '2026-01-01T00:00:00Z' });
+    assert.strictEqual(doc.spdxVersion, 'SPDX-2.3');
+    assert.strictEqual(doc.packages.length, 1);
+    assert.strictEqual(doc.packages[0].name, 'express');
+    assert.strictEqual(doc.packages[0].licenseDeclared, 'MIT');
+    assert.strictEqual(doc.packages[0].downloadLocation, entries[0].origin.tarball);
+  });
+
+  it('should build a valid CycloneDX 1.5 document', () => {
+    const doc = exporter.buildCycloneDx(entries, { now: '2026-01-01T00:00:00Z' });
+    assert.strictEqual(doc.bomFormat, 'CycloneDX');
+    assert.strictEqual(doc.specVersion, '1.5');
+    assert.strictEqual(doc.components.length, 1);
+    assert.strictEqual(doc.components[0].purl, 'pkg:npm/express@5.1.0');
+    assert.deepStrictEqual(doc.components[0].licenses, [{ license: { id: 'MIT' } }]);
+  });
+
+  it('should build purl for scoped packages', () => {
+    assert.strictEqual(exporter.purlFor('@scope/name', '1.0.0'), 'pkg:npm/%40scope/name@1.0.0');
+  });
+
+  it('should throw on unknown format', () => {
+    assert.throws(() => exporter.build('nope', entries), /Unknown export format/);
+  });
+});
+
+describe('Provenance CLI arg parsing', () => {
+  const { parseArgs } = require('../src/cli/provenance');
+
+  it('should parse package name only', () => {
+    assert.deepStrictEqual(parseArgs(['express']), {
+      packageName: 'express',
+      exportFormat: null,
+      out: null,
+      osv: false,
+      quality: false
+    });
+  });
+
+  it('should parse --export and --out flags', () => {
+    assert.deepStrictEqual(parseArgs(['--export', 'spdx', '--out', 'sbom.json']), {
+      packageName: null,
+      exportFormat: 'spdx',
+      out: 'sbom.json',
+      osv: false,
+      quality: false
+    });
+  });
+
+  it('should parse --osv flag with package', () => {
+    assert.deepStrictEqual(parseArgs(['express', '--osv']), {
+      packageName: 'express',
+      exportFormat: null,
+      out: null,
+      osv: true,
+      quality: false
+    });
+  });
+
+  it('should parse --quality flag', () => {
+    assert.deepStrictEqual(parseArgs(['express', '--quality']), {
+      packageName: 'express',
+      exportFormat: null,
+      out: null,
+      osv: false,
+      quality: true
+    });
+  });
+});
+
+describe('Quality signals', () => {
+  const quality = require('../src/provenance/quality');
+  const testDir = path.join(os.tmpdir(), 'nxnode-quality-test');
+
+  beforeEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+    fs.mkdirSync(testDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('should detect readme and license files', () => {
+    fs.writeFileSync(path.join(testDir, 'README.md'), '# hi');
+    fs.writeFileSync(path.join(testDir, 'LICENSE'), 'MIT');
+    const q = quality.computeQuality(testDir, {}, { integrity: 'sha512-x' });
+    assert.strictEqual(q.hasReadme, true);
+    assert.strictEqual(q.hasLicenseFile, true);
+    assert.strictEqual(q.integrityVerified, true);
+  });
+
+  it('should report missing files as false', () => {
+    const q = quality.computeQuality(testDir, {}, {});
+    assert.strictEqual(q.hasReadme, false);
+    assert.strictEqual(q.hasLicenseFile, false);
+    assert.strictEqual(q.integrityVerified, false);
+  });
+
+  it('should compute counts and flags from package.json', () => {
+    const pkg = {
+      description: 'a lib',
+      keywords: ['a', 'b'],
+      repository: 'https://example.com',
+      deprecated: 'use v2',
+      dependencies: { a: '1.0.0', b: '2.0.0' },
+      scripts: { test: 'x', postinstall: 'y', preinstall: 'z' }
+    };
+    const q = quality.computeQuality(testDir, pkg, {});
+    assert.strictEqual(q.hasDescription, true);
+    assert.strictEqual(q.hasKeywords, true);
+    assert.strictEqual(q.hasRepository, true);
+    assert.strictEqual(q.deprecated, true);
+    assert.strictEqual(q.dependencyCount, 2);
+    assert.strictEqual(q.scriptCount, 3);
+    assert.deepStrictEqual(q.npmScripts, ['preinstall', 'postinstall']);
+  });
+});
+
 describe('Store', () => {
   const store = require('../src/store/store');
   const testStoreDir = path.join(os.tmpdir(), 'nxnode-test-store');

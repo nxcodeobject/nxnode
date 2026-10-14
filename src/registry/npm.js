@@ -50,6 +50,8 @@ async function getPackageMetadata(name, version) {
     name: ver.name,
     version: ver.version,
     dist: ver.dist,
+    license: ver.license,
+    licenses: ver.licenses,
     dependencies: ver.dependencies || {},
     scripts: ver.scripts || {},
     os: ver.os,

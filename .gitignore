@@ -3,7 +3,6 @@ node_modules/
 website/
 *.log
 .nxcode/
-.claude/
 coverage/
 .DS_Store
 Thumbs.db

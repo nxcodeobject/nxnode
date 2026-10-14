@@ -9,7 +9,9 @@ const { showConfig, setConfig } = require('./configCmd');
 const { createProject } = require('./projectCmd');
 const { link, unlink } = require('./link');
 const { clean } = require('./clean');
+const { showProvenance } = require('./provenance');
 const config = require('../config/config');
+const pkg = require('../../package.json');
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -47,7 +49,7 @@ async function main() {
         break;
 
       case 'link':
-        link(arg1);
+        await link(arg1);
         break;
 
       case 'unlink':
@@ -95,6 +97,10 @@ async function main() {
         }
         break;
 
+      case 'provenance':
+        await showProvenance(args.slice(1));
+        break;
+
       case 'doctor':
         console.log('[NxNode] Doctor:');
         console.log(`  Store: ${config.get('storePath')}`);
@@ -104,7 +110,7 @@ async function main() {
 
       case '--version':
       case '-v':
-        console.log('0.1.0');
+        console.log(pkg.version);
         break;
 
       case '--help':
@@ -128,6 +134,9 @@ Commands:
   store path            Show store path
   store clean           Clean unused packages
   store projects        List registered projects using this store
+  provenance [<pkg>]    Show package origin/integrity/license/quality provenance
+                        --osv: include vulnerability data; --quality: detail quality signals
+                        --export spdx|cyclonedx [--out <file>]
   config                Show configuration
   config <key> <value>  Set configuration
   project create <name> Create a new project

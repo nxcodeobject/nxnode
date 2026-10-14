@@ -50,6 +50,9 @@ async function downloadAndStore(packageName, version) {
     integrity: computedIntegrity,
     source: 'npm',
     installedAt: new Date().toISOString(),
+    tarball: tarballUrl,
+    license: metadata.license || null,
+    licenses: metadata.licenses || null,
     dependencies: metadata.dependencies || {},
     scripts: metadata.scripts || {}
   });

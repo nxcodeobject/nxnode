@@ -167,6 +167,15 @@ Cek Global Store
 - [x] Implement `nxnode project create <name>`
 - [x] Implement `nxnode link` / `nxnode unlink`
 
+### 8.4 Provenance & License (deliverable NLnet CodeSupply — lihat `src/provenance/README.md`)
+- [x] Simpan origin (tarball URL) + license declared di metadata store saat install
+- [x] Modul deteksi license (SPDX): heuristik declared (package.json) + detected (file LICENSE), tanpa dependency baru
+- [x] Modul provenance: gabungkan origin + integrity + license per package di store
+- [x] Command `nxnode provenance [<package>]`
+- [x] Integrasi vulnerability (OSV querybatch) via flag `--osv`
+- [x] Export dataset SPDX 2.3 & CycloneDX 1.5 (`--export spdx|cyclonedx`, `--out <path>`)
+- [x] Quality signals (readme/license/repository/description/keywords/deps/scripts/deprecated/integrity/install-scripts) via `--quality`
+
 ---
 
 ## Tahap 9: Testing (Minggu 15-16)
@@ -180,6 +189,11 @@ Cek Global Store
 - [x] Test install flow lengkap
 - [x] Test multi-project scenario
 - [x] Test garbage collection
+
+### 9.3 Perbaikan reliability linker (2 test yang sebelumnya gagal)
+- [x] `pathExists` (lstat-based) menggantikan `existsSync` untuk path link di `linker.js` & `store.js` — bug: `fs.existsSync` (stat-based) melaporkan junction valid sebagai hilang di sebagian environment Windows, membuat 2 test gagal
+- [x] Test memakai pemeriksaan lstat di `tests/integration.test.js`
+- [x] `nxnode link` resolve versi lewat lockfile + resolver (bukan strip regex) — lihat `src/linker/README.md`
 
 ---
 
