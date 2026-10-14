@@ -1,10 +1,10 @@
 {
-  "name": "nxnode",
+  "name": "@iandantrik/nxnode",
   "version": "0.2.0",
   "description": "Shared Node.js Package Store & Project Dependency Manager",
   "main": "src/index.js",
   "bin": {
-    "nxnode": "./bin/nxnode.js"
+    "nxnode": "bin/nxnode.js"
   },
   "files": [
     "bin/",
