@@ -249,6 +249,90 @@ describe('Provenance CLI arg parsing', () => {
   });
 });
 
+describe('Registry fetch resilience', () => {
+  const npm = require('../src/registry/npm');
+  const http = require('http');
+
+  it('should parse Retry-After seconds and HTTP-date', () => {
+    assert.strictEqual(npm.parseRetryAfter('2'), 2000);
+    assert.strictEqual(npm.parseRetryAfter(undefined), null);
+    assert.strictEqual(npm.parseRetryAfter('garbage'), null);
+    const future = new Date(Date.now() + 3000).toUTCString();
+    const ms = npm.parseRetryAfter(future);
+    assert.ok(ms > 0 && ms <= 3000);
+  });
+
+  it('should back off exponentially and cap', () => {
+    assert.strictEqual(npm.backoffMs(0, null), 200);
+    assert.strictEqual(npm.backoffMs(1, null), 400);
+    assert.strictEqual(npm.backoffMs(10, null), 5000);
+    assert.strictEqual(npm.backoffMs(0, 1234), 1234);
+  });
+
+  it('should retry transient failures and then succeed', async () => {
+    let calls = 0;
+    const server = http.createServer((req, res) => {
+      calls++;
+      if (calls < 3) {
+        res.writeHead(503);
+        res.end('busy');
+      } else {
+        res.writeHead(200);
+        res.end('ok');
+      }
+    });
+    await new Promise((r) => server.listen(0, r));
+    const url = `http://127.0.0.1:${server.address().port}/`;
+
+    try {
+      const body = await npm.request(url, { retries: 5 });
+      assert.strictEqual(body.toString(), 'ok');
+      assert.strictEqual(calls, 3);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('should not retry non-retryable status (404)', async () => {
+    let calls = 0;
+    const server = http.createServer((req, res) => {
+      calls++;
+      res.writeHead(404);
+      res.end('nope');
+    });
+    await new Promise((r) => server.listen(0, r));
+    const url = `http://127.0.0.1:${server.address().port}/`;
+
+    try {
+      await assert.rejects(() => npm.request(url, { retries: 5 }), /HTTP 404/);
+      assert.strictEqual(calls, 1);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('should follow redirects', async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === '/from') {
+        res.writeHead(302, { Location: '/to' });
+        res.end();
+      } else {
+        res.writeHead(200);
+        res.end('arrived');
+      }
+    });
+    await new Promise((r) => server.listen(0, r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+
+    try {
+      const body = await npm.request(`${base}/from`, { retries: 0 });
+      assert.strictEqual(body.toString(), 'arrived');
+    } finally {
+      server.close();
+    }
+  });
+});
+
 describe('Quality signals', () => {
   const quality = require('../src/provenance/quality');
   const testDir = path.join(os.tmpdir(), 'nxnode-quality-test');
