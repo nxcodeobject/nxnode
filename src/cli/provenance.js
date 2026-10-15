@@ -2,6 +2,7 @@ const fs = require('fs');
 const provenance = require('../provenance');
 const osv = require('../provenance/osv');
 const exporter = require('../provenance/export');
+const dataset = require('../provenance/dataset');
 
 function formatLicense(license) {
   const declared = license.declared || 'UNKNOWN';
@@ -12,7 +13,7 @@ function formatLicense(license) {
 }
 
 function parseArgs(argv) {
-  const opts = { packageName: null, exportFormat: null, out: null, osv: false, quality: false };
+  const opts = { packageName: null, exportFormat: null, out: null, dataset: null, osv: false, quality: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--osv') {
@@ -23,6 +24,8 @@ function parseArgs(argv) {
       opts.exportFormat = argv[++i] || null;
     } else if (arg === '--out') {
       opts.out = argv[++i] || null;
+    } else if (arg === '--dataset') {
+      opts.dataset = argv[++i] || null;
     } else if (!arg.startsWith('--')) {
       opts.packageName = arg;
     }
@@ -92,6 +95,12 @@ async function showProvenance(argv = []) {
 
   if (opts.osv) {
     await attachOsv(entries);
+  }
+
+  if (opts.dataset) {
+    const result = dataset.writeDataset(entries, opts.dataset);
+    console.log(`[NxNode] Wrote open dataset to ${opts.dataset} (${result.packages} package${result.packages === 1 ? '' : 's'})`);
+    return;
   }
 
   if (opts.exportFormat) {

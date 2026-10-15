@@ -213,6 +213,7 @@ describe('Provenance CLI arg parsing', () => {
       packageName: 'express',
       exportFormat: null,
       out: null,
+      dataset: null,
       osv: false,
       quality: false
     });
@@ -223,6 +224,7 @@ describe('Provenance CLI arg parsing', () => {
       packageName: null,
       exportFormat: 'spdx',
       out: 'sbom.json',
+      dataset: null,
       osv: false,
       quality: false
     });
@@ -233,6 +235,7 @@ describe('Provenance CLI arg parsing', () => {
       packageName: 'express',
       exportFormat: null,
       out: null,
+      dataset: null,
       osv: true,
       quality: false
     });
@@ -243,8 +246,20 @@ describe('Provenance CLI arg parsing', () => {
       packageName: 'express',
       exportFormat: null,
       out: null,
+      dataset: null,
       osv: false,
       quality: true
+    });
+  });
+
+  it('should parse --dataset flag', () => {
+    assert.deepStrictEqual(parseArgs(['--dataset', 'out/dir']), {
+      packageName: null,
+      exportFormat: null,
+      out: null,
+      dataset: 'out/dir',
+      osv: false,
+      quality: false
     });
   });
 });
@@ -330,6 +345,56 @@ describe('Registry fetch resilience', () => {
     } finally {
       server.close();
     }
+  });
+});
+
+describe('Open dataset', () => {
+  const dataset = require('../src/provenance/dataset');
+  const testDir = path.join(os.tmpdir(), 'nxnode-dataset-test');
+
+  beforeEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  const entries = [
+    {
+      name: 'express',
+      version: '5.1.0',
+      origin: { source: 'npm', tarball: 'https://x/y.tgz', integrity: 'sha512-abc' },
+      license: { declared: 'MIT', detected: 'MIT', mismatch: false },
+      quality: { hasReadme: true }
+    },
+    {
+      name: '@scope/name',
+      version: '1.0.0',
+      origin: { source: 'npm', tarball: null, integrity: 'sha512-def' },
+      license: { declared: 'ISC', detected: null, mismatch: false },
+      quality: { hasReadme: false }
+    }
+  ];
+
+  it('should write one JSON file per package plus index', () => {
+    const result = dataset.writeDataset(entries, testDir, { now: '2026-01-01T00:00:00Z' });
+
+    assert.strictEqual(result.packages, 2);
+    assert.ok(fs.existsSync(path.join(testDir, 'index.json')));
+    assert.ok(fs.existsSync(path.join(testDir, 'packages', 'express', '5.1.0.json')));
+    // scoped name encoded as a single folder
+    assert.ok(fs.existsSync(path.join(testDir, 'packages', '@scope+name', '1.0.0.json')));
+  });
+
+  it('should write a schema-versioned index', () => {
+    dataset.writeDataset(entries, testDir, { now: '2026-01-01T00:00:00Z' });
+    const index = JSON.parse(fs.readFileSync(path.join(testDir, 'index.json'), 'utf-8'));
+
+    assert.strictEqual(index.schemaVersion, dataset.SCHEMA_VERSION);
+    assert.strictEqual(index.packageCount, 2);
+    assert.strictEqual(index.packages[0].name, 'express');
+    assert.strictEqual(index.packages[0].license, 'MIT');
   });
 });
 

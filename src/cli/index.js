@@ -137,6 +137,7 @@ Commands:
   provenance [<pkg>]    Show package origin/integrity/license/quality provenance
                         --osv: include vulnerability data; --quality: detail quality signals
                         --export spdx|cyclonedx [--out <file>]
+                        --dataset <dir>: write open per-package JSON dataset
   config                Show configuration
   config <key> <value>  Set configuration
   project create <name> Create a new project

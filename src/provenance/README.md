@@ -118,3 +118,37 @@ fakta yang bisa diverifikasi. Muncul di `nxnode provenance` dan opsional di expo
 - [x] test + lint
 
 ✅ SUDAH DIEKSEKUSI (iterasi 3)
+
+## Iterasi 4 — publish open dataset
+
+### Keputusan desain
+
+Proposal Task 4 menyebut "publish as open dataset + machine-readable export".
+`--export spdx|cyclonedx` sudah menghasilkan satu SBOM, tetapi belum ada bentuk
+**dataset terbuka per-package** yang bisa dibagikan/di-commit/di-mirror.
+
+Command baru: `nxnode provenance --dataset <dir>` menulis:
+
+- `<dir>/packages/<encoded-name>/<version>.json` — provenance lengkap satu package
+  (origin, integrity, license declared/detected/mismatch, quality). Satu file per
+  package agar diff-friendly dan mudah di-mirror.
+- `<dir>/index.json` — daftar package + ringkasan, plus metadata dataset
+  (versi format, waktu dibuat) supaya konsumen tahu skema & kesegaran data.
+
+Format `index.json` diberi `schemaVersion` supaya kompatibel ke depan. Tanpa
+network (dataset ditulis dari isi store). Opsi `--osv` tetap bisa dipakai untuk
+melampirkan data vulnerability bila diinginkan.
+
+### Perubahan file
+
+- `src/provenance/dataset.js` — tulis dataset (baru).
+- `src/cli/provenance.js` — flag `--dataset <dir>`.
+- `tests/` — test penulisan dataset.
+
+### Status
+
+- [x] `dataset.js`
+- [x] flag CLI `--dataset`
+- [x] test + lint
+
+✅ SUDAH DIEKSEKUSI (iterasi 4)
