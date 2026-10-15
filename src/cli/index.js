@@ -4,7 +4,7 @@ const { install, installAll } = require('./install');
 const { remove } = require('./remove');
 const { update } = require('./update');
 const { listLocal, listGlobal } = require('./list');
-const { showPath, showStoreInfo, showProjects } = require('./store');
+const { showPath, showStoreInfo, showProjects, dedupStore } = require('./store');
 const { showConfig, setConfig } = require('./configCmd');
 const { createProject } = require('./projectCmd');
 const { link, unlink } = require('./link');
@@ -72,6 +72,8 @@ async function main() {
           clean();
         } else if (arg1 === 'projects') {
           showProjects();
+        } else if (arg1 === 'dedup') {
+          dedupStore();
         } else {
           showStoreInfo();
         }
@@ -134,6 +136,7 @@ Commands:
   store path            Show store path
   store clean           Clean unused packages
   store projects        List registered projects using this store
+  store dedup           Hardlink identical files across stored packages
   provenance [<pkg>]    Show package origin/integrity/license/quality provenance
                         --osv: include vulnerability data; --quality: detail quality signals
                         --export spdx|cyclonedx [--out <file>]

@@ -10,6 +10,7 @@ const resolver = require('../resolver/resolver');
 const lockfile = require('../store/lockfile');
 const registry = require('../store/registry');
 const lifecycle = require('../store/lifecycle');
+const dedup = require('../store/dedup');
 const { DependencyTree } = require('../resolver/dependency-tree');
 
 async function downloadAndStore(packageName, version) {
@@ -43,6 +44,8 @@ async function downloadAndStore(packageName, version) {
   }
 
   fs.unlinkSync(tarPath);
+
+  dedup.dedupDirectory(packageDir, store.getStorePath());
 
   store.saveMetadata(packageName, version, {
     name: packageName,

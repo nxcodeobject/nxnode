@@ -398,6 +398,62 @@ describe('Open dataset', () => {
   });
 });
 
+describe('Store dedup', () => {
+  const dedup = require('../src/store/dedup');
+  const testDir = path.join(os.tmpdir(), 'nxnode-dedup-test');
+  const storeDir = path.join(testDir, 'store');
+
+  beforeEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+    fs.mkdirSync(testDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('should hardlink identical files across packages', () => {
+    const a = path.join(testDir, 'a');
+    const b = path.join(testDir, 'b');
+    fs.mkdirSync(a, { recursive: true });
+    fs.mkdirSync(b, { recursive: true });
+    fs.writeFileSync(path.join(a, 'LICENSE'), 'same content');
+    fs.writeFileSync(path.join(b, 'LICENSE'), 'same content');
+
+    const index = dedup.readIndex(storeDir);
+    dedup.dedupDirectory(a, storeDir, { index });
+    const stats = dedup.dedupDirectory(b, storeDir, { index });
+
+    assert.strictEqual(stats.linked, 1);
+    // hardlinked files share the same link count
+    assert.strictEqual(fs.statSync(path.join(a, 'LICENSE')).nlink, 2);
+    // and changing one is visible from the other (same inode)
+    fs.writeFileSync(path.join(a, 'LICENSE'), 'changed');
+    assert.strictEqual(fs.readFileSync(path.join(b, 'LICENSE'), 'utf-8'), 'changed');
+  });
+
+  it('should keep distinct content as separate files', () => {
+    const a = path.join(testDir, 'a');
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, 'x'), 'one');
+    fs.writeFileSync(path.join(a, 'y'), 'two');
+
+    const stats = dedup.dedupDirectory(a, storeDir);
+    assert.strictEqual(stats.written, 2);
+    assert.strictEqual(stats.linked, 0);
+  });
+
+  it('should persist the hash index', () => {
+    const a = path.join(testDir, 'a');
+    fs.mkdirSync(a, { recursive: true });
+    fs.writeFileSync(path.join(a, 'f'), 'content');
+
+    dedup.dedupDirectory(a, storeDir);
+    const index = dedup.readIndex(storeDir);
+    assert.strictEqual(Object.keys(index).length, 1);
+  });
+});
+
 describe('Quality signals', () => {
   const quality = require('../src/provenance/quality');
   const testDir = path.join(os.tmpdir(), 'nxnode-quality-test');

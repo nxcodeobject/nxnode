@@ -57,9 +57,10 @@ nxnode/
 - [x] `metadata.js` - Package metadata management
 - [x] `integrity.js` - SHA512 integrity verification
 
-### 3.4 Smart Store (belum dikerjakan)
-- [ ] Content-addressable storage (dedup berbasis hash, README §17) — store saat ini masih per `name/version`, bukan per-hash
-- [ ] Store statistics
+### 3.4 Smart Store
+- [x] Store statistics
+- [x] Dedup file antar-package via hardlink (Fase 1) — file identik di store di-share lewat hardlink (`store dedup`), layout `packages/<name>/<version>` tetap. Lihat `src/store/README.md`. Belum CAS penuh (`store/content/<hash>`) — itu Fase 2 opsional
+- [x] Content-addressable storage (dedup berbasis hash, README §17) — ditangani sebagai dedup hardlink; layout store tidak diubah (keputusan: hindari memecah linker/lockfile/metadata)
 
 ---
 

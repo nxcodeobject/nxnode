@@ -4,6 +4,20 @@ Catatan perubahan NxNode Package Manager.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Registry fetch resilience**: retry dengan exponential backoff, hormati
+  `Retry-After`, timeout per-request, dan batas kedalaman redirect di
+  `src/registry/npm.js` (menutup klaim proposal "robust, resumable fetching")
+- **Open dataset**: `nxnode provenance --dataset <dir>` menulis satu file JSON per
+  package + `index.json` berschemaVersion (`src/provenance/dataset.js`)
+- **Store dedup**: file identik antar package di store di-share lewat hardlink
+  (backend: `src/store/dedup.js`; command `nxnode store dedup` untuk backfill).
+  Layout `packages/<name>/<version>` tetap tidak berubah
+
+---
+
 ## [0.1.0] - 2026-09-12
 
 ### Added
