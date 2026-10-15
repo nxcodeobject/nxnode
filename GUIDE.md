@@ -17,22 +17,25 @@ Panduan lengkap menggunakan NxNode Package Manager.
 
 ## Installation
 
-> **Note:** NxNode (v0.1.0) has not been published to npm yet. Until it is, run it directly from source instead of `npm install -g`:
-> ```bash
-> cd D:\Framework\CLI\nxnode
-> npm install
-> node bin/nxnode.js <command>
-> ```
-> Or link it locally so `nxnode` works as a global command:
-> ```bash
-> cd D:\Framework\CLI\nxnode
-> npm link
-> ```
+### Install from npm
 
-### Install from npm (once published)
+Published as **`@iandantrik/nxnode`** — the installed command is still `nxnode`:
 
 ```bash
-npm install -g nxnode
+npm install -g @iandantrik/nxnode
+```
+
+### Run from source (development)
+
+```bash
+cd D:\Framework\CLI\nxnode
+npm install
+node bin/nxnode.js <command>
+```
+Or link it locally so `nxnode` works as a global command:
+```bash
+cd D:\Framework\CLI\nxnode
+npm link
 ```
 
 ### Verify Installation
@@ -510,4 +513,43 @@ nxnode config linkMode junction
 
 ## Support
 
-This is a local/personal project (v0.1.0, not yet published to npm or a public GitHub repository). For issues, refer to your own project notes or the source in `D:\Framework\CLI\nxnode\`.
+Published on npm as **`@iandantrik/nxnode`** (the installed command is still `nxnode`). Source: https://github.com/nxcodeobject/nxnode.
+
+For issues, use the GitHub repository's issue tracker or your own project notes.
+
+---
+
+## Releasing a new version
+
+Publishing to npm is driven by a **GitHub Release**, not by running `npm publish`
+by hand. This keeps the published version tied to an auditable tag.
+
+### One-time setup (Trusted Publishing)
+
+Link the npm package to this repository so the workflow can publish without a
+stored token:
+
+1. Open https://www.npmjs.com/package/@iandantrik/nxnode/access
+2. Under **Trusted Publisher**, add a **GitHub Actions** publisher:
+   - Organization or user: `nxcodeobject`
+   - Repository: `nxnode`
+   - Workflow filename: `publish.yml`
+   - Environment: (leave empty)
+3. Save.
+
+### Steps for each release
+
+1. Bump `version` in `package.json` (e.g. `0.3.0`).
+2. Commit and push to `main`.
+3. Create and push the matching tag:
+   ```bash
+   git tag -a v0.3.0 -m "v0.3.0"
+   git push origin v0.3.0
+   ```
+4. On GitHub, go to **Releases → Draft a new release**, choose tag `v0.3.0`, and
+   **Publish release**.
+5. The `publish` workflow runs automatically: it lints, tests, verifies the tag
+   matches `package.json`, then runs `npm publish --access public`.
+
+If the tag and `package.json` version disagree, the workflow fails on purpose — so
+a mistyped tag can never publish the wrong version.
