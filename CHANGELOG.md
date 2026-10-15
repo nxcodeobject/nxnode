@@ -15,6 +15,7 @@ Catatan perubahan NxNode Package Manager.
 - **Store dedup**: file identik antar package di store di-share lewat hardlink
   (backend: `src/store/dedup.js`; command `nxnode store dedup` untuk backfill).
   Layout `packages/<name>/<version>` tetap tidak berubah
+- **CONTRIBUTING.md**: panduan kontribusi (setup, lint/test, gaya kode, PR)
 
 ---
 

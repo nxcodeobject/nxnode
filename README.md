@@ -1218,3 +1218,5 @@ Config file: `%USERPROFILE%\.nxnode\config.json`
 # 32. Lisensi
 
 Dirilis di bawah **MIT License** — lihat berkas [`LICENSE`](./LICENSE).
+
+Ingin berkontribusi? Lihat [`CONTRIBUTING.md`](./CONTRIBUTING.md).
